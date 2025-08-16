@@ -73,7 +73,7 @@
         }
 
         #gameScreen {
-            background: #f0f0f0;
+            background: #1a1a2e;
             flex-direction: row;
             padding: 0;
         }
@@ -337,6 +337,252 @@
             font-size: 1.2em;
             font-weight: bold;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #2d2d44;
+            border: 2px solid #4a4a6a;
+            border-radius: 20px;
+            max-width: 800px;
+            height: 600px;
+            padding: 40px;
+            position: relative;
+            animation: modalSlide 0.3s ease-out;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .slides-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.5s ease-in-out;
+            overflow-y: auto;
+            padding-right: 20px;
+        }
+        
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .slide.prev {
+            transform: translateX(-100%);
+        }
+        
+        .slide::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .slide::-webkit-scrollbar-track {
+            background: #1a1a2e;
+            border-radius: 4px;
+        }
+        
+        .slide::-webkit-scrollbar-thumb {
+            background: #4a4a6a;
+            border-radius: 4px;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #4a4a6a;
+        }
+        
+        .nav-btn {
+            background: transparent;
+            border: 2px solid #4a4a6a;
+            color: #bbb;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1em;
+        }
+        
+        .nav-btn:hover:not(:disabled) {
+            background: #4a4a6a;
+            color: white;
+        }
+        
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .slide-dots {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4a4a6a;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .dot.active {
+            background: #4CAF50;
+            transform: scale(1.2);
+        }
+        
+        .dot:hover {
+            background: #6a6a8a;
+        }
+
+        @keyframes modalSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 2em;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal h2 {
+            color: #4CAF50;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .modal h3 {
+            color: #fff;
+            font-size: 1.5em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #4a4a6a;
+            padding-bottom: 10px;
+        }
+
+        .modal p, .modal li {
+            color: #bbb;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .modal ul {
+            margin-left: 20px;
+            margin-bottom: 20px;
+        }
+
+        .step-card {
+            background: #1a1a2e;
+            border: 1px solid #3a3a5a;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .metric-box {
+            display: inline-block;
+            background: #1a1a2e;
+            padding: 8px 15px;
+            border-radius: 8px;
+            margin: 5px;
+            border: 1px solid #4a4a6a;
+        }
+
+        .metric-box.positive {
+            border-color: #4CAF50;
+            color: #4CAF50;
+        }
+
+        .metric-box.negative {
+            border-color: #f44336;
+            color: #f44336;
+        }
+
+        .metric-box.neutral {
+            border-color: #999;
+            color: #999;
+        }
+
+        .endings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .ending-card {
+            background: #1a1a2e;
+            border: 1px solid #3a3a5a;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .ending-card h4 {
+            color: #ffd700;
+            margin-bottom: 8px;
+        }
+
+        .ending-card p {
+            font-size: 0.9em;
+            color: #999;
+        }
     </style>
 </head>
 <body>
@@ -422,6 +668,160 @@
                 <p>Days Survived: <span id="finalDays">0</span></p>
             </div>
             <button class="button" onclick="restartGame()">Play Again</button>
+        </div>
+
+        <!-- How to Play Modal -->
+        <div id="howToPlayModal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+                <h2>📖 How to Play Echo Chamber</h2>
+                
+                <div class="slides-container">
+                    <!-- Slide 1: Your Mission -->
+                    <div class="slide active" data-slide="1">
+                        <h3>🎯 Your Mission</h3>
+                        <p style="font-size: 1.2em; margin: 30px 0;">You are the unseen hand behind a massive social media feed.</p>
+                        <p style="font-size: 1.1em;">You don't write the posts — you decide what millions of people see.</p>
+                        <p style="font-size: 1.1em; margin-top: 30px;">Every choice shapes society's mood and the platform's engagement.</p>
+                        <div style="text-align: center; margin-top: 50px;">
+                            <div style="font-size: 4em;">🌐</div>
+                            <p style="color: #4CAF50; font-size: 1.2em; margin-top: 20px;">Your algorithm decides reality</p>
+                        </div>
+                    </div>
+
+                    <!-- Slide 2: How It Works -->
+                    <div class="slide" data-slide="2">
+                        <h3>📱 How It Works</h3>
+                        <div class="step-card">
+                            <span class="step-number">1</span>
+                            <strong>Review Posts:</strong> Each day, you'll see 3 posts with different tones and topics.
+                        </div>
+                        <div class="step-card">
+                            <span class="step-number">2</span>
+                            <strong>Make Decisions:</strong> For each post, choose one action:
+                            <ul>
+                                <li><span class="metric-box positive">Boost</span> Amplify the post's reach to millions</li>
+                                <li><span class="metric-box negative">Hide</span> Suppress the post from the feed</li>
+                                <li><span class="metric-box neutral">Ignore</span> Let it pass naturally</li>
+                            </ul>
+                        </div>
+                        <div class="step-card">
+                            <span class="step-number">3</span>
+                            <strong>Watch Society React:</strong> Your decisions affect:
+                            <ul>
+                                <li>📈 <strong>Engagement:</strong> How active users are</li>
+                                <li>😊 <strong>Mood:</strong> Society's emotional state</li>
+                                <li>🏙️ <strong>The City:</strong> Watch stick figures react!</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Slide 3: The Dilemma -->
+                    <div class="slide" data-slide="3">
+                        <h3>⚖️ The Dilemma</h3>
+                        <p style="font-size: 1.3em; color: #f44336; text-align: center; margin: 30px 0;">
+                            <strong>There is no "correct" way to play.</strong>
+                        </p>
+                        <p style="text-align: center; margin-bottom: 30px;">Every strategy has consequences:</p>
+                        <div class="step-card">
+                            🔥 <strong>Boost negative content:</strong><br>
+                            High engagement but society becomes angry
+                        </div>
+                        <div class="step-card">
+                            ❤️ <strong>Boost positive content:</strong><br>
+                            Happy society but lower engagement
+                        </div>
+                        <div class="step-card">
+                            🚫 <strong>Hide too much:</strong><br>
+                            People lose trust and leave the platform
+                        </div>
+                    </div>
+
+                    <!-- Slide 4: Watch the City -->
+                    <div class="slide" data-slide="4">
+                        <h3>🎭 Watch the City</h3>
+                        <p>The stick figures reveal society's state:</p>
+                        <div class="step-card" style="background: rgba(76, 175, 80, 0.1);">
+                            <strong>😊 Happy (Mood > 20):</strong><br>
+                            Bouncing, waving, peaceful
+                        </div>
+                        <div class="step-card">
+                            <strong>😐 Normal (-10 to 20):</strong><br>
+                            Walking calmly
+                        </div>
+                        <div class="step-card" style="background: rgba(244, 67, 54, 0.1);">
+                            <strong>😠 Angry (-30 to -10):</strong><br>
+                            Fast walking, agitated
+                        </div>
+                        <div class="step-card" style="background: rgba(244, 67, 54, 0.2);">
+                            <strong>🔥 Chaos (< -30):</strong><br>
+                            Running, fighting, riots!
+                        </div>
+                    </div>
+
+                    <!-- Slide 5: Possible Endings -->
+                    <div class="slide" data-slide="5">
+                        <h3>🏆 Possible Endings</h3>
+                        <div class="endings-grid">
+                            <div class="ending-card">
+                                <h4>🌈 Harmony</h4>
+                                <p>Peaceful society, but you're fired for low engagement</p>
+                            </div>
+                            <div class="ending-card">
+                                <h4>🔥 Chaos</h4>
+                                <p>City burns, but you get promoted</p>
+                            </div>
+                            <div class="ending-card">
+                                <h4>👁️ Surveillance</h4>
+                                <p>One faction dominates</p>
+                            </div>
+                            <div class="ending-card">
+                                <h4>👻 Ghost Town</h4>
+                                <p>Everyone abandons the platform</p>
+                            </div>
+                            <div class="ending-card">
+                                <h4>🤷 Status Quo</h4>
+                                <p>Nothing changes</p>
+                            </div>
+                        </div>
+                        <p style="text-align: center; margin-top: 30px; color: #4CAF50;">
+                            Each ending reflects a different definition of "success"
+                        </p>
+                    </div>
+
+                    <!-- Slide 6: The Real Question -->
+                    <div class="slide" data-slide="6">
+                        <h3>💭 The Real Question</h3>
+                        <div style="text-align: center; margin-top: 50px;">
+                            <p style="font-size: 1.5em; color: #4CAF50; margin-bottom: 40px;">
+                                <strong>What does "success" mean when you control information?</strong>
+                            </p>
+                            <p style="font-size: 1.2em; margin: 20px 0;">Is it maximizing engagement?</p>
+                            <p style="font-size: 1.2em; margin: 20px 0;">Creating happiness?</p>
+                            <p style="font-size: 1.2em; margin: 20px 0;">Just surviving?</p>
+                            <p style="font-size: 1.3em; color: #f44336; margin-top: 40px;">
+                                <strong>You decide.</strong>
+                            </p>
+                            <p style="margin-top: 50px; font-style: italic; color: #999;">
+                                Remember: With great algorithmic power comes great responsibility.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="nav-buttons">
+                    <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+                    <div class="slide-dots">
+                        <span class="dot active" onclick="goToSlide(1)"></span>
+                        <span class="dot" onclick="goToSlide(2)"></span>
+                        <span class="dot" onclick="goToSlide(3)"></span>
+                        <span class="dot" onclick="goToSlide(4)"></span>
+                        <span class="dot" onclick="goToSlide(5)"></span>
+                        <span class="dot" onclick="goToSlide(6)"></span>
+                    </div>
+                    <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+                </div>
+            </div>
         </div>
     </div>
 

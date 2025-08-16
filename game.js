@@ -613,25 +613,52 @@ function startGame() {
 }
 
 function showInstructions() {
-    alert(`📖 How to Play Echo Chamber
+    document.getElementById('howToPlayModal').classList.add('active');
+}
 
-You control what society sees in their social feed.
+function closeModal() {
+    document.getElementById('howToPlayModal').classList.remove('active');
+    currentSlide = 1;
+    showSlide(1);
+}
 
-Each day, you'll see 3 posts:
-• Click to select a post
-• BOOST (📢) - Amplify its reach
-• HIDE (🚫) - Suppress it
-• SKIP (➡️) - Let it pass naturally
+let currentSlide = 1;
+const totalSlides = 6;
 
-Your choices affect:
-📈 ENGAGEMENT - Keep it high to keep your job
-😊 MOOD - Society's emotional state
-🏛️ POLITICS - Balance of power
+function changeSlide(direction) {
+    const newSlide = currentSlide + direction;
+    if (newSlide >= 1 && newSlide <= totalSlides) {
+        showSlide(newSlide);
+    }
+}
 
-Watch the city react to your decisions!
-Different endings await based on your editorial style.
+function goToSlide(slideNum) {
+    showSlide(slideNum);
+}
 
-Remember: With great algorithmic power comes great responsibility.`);
+function showSlide(slideNum) {
+    const slides = document.querySelectorAll('.slide');
+    const dots = document.querySelectorAll('.dot');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    
+    slides.forEach((slide, index) => {
+        slide.classList.remove('active', 'prev');
+        if (index + 1 < slideNum) {
+            slide.classList.add('prev');
+        } else if (index + 1 === slideNum) {
+            slide.classList.add('active');
+        }
+    });
+    
+    dots.forEach((dot, index) => {
+        dot.classList.toggle('active', index + 1 === slideNum);
+    });
+    
+    prevBtn.disabled = slideNum === 1;
+    nextBtn.disabled = slideNum === totalSlides;
+    
+    currentSlide = slideNum;
 }
 
 
