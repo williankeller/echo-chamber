@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Echo Chamber — Web Prototype</title>
+  <style>
+    :root {
+      --bg: #0e1117;
+      --panel: #161b22;
+      --muted: #8b949e;
+      --text: #e6edf3;
+      --positive: #2ea043;
+      --negative: #f85149;
+      --accent: #58a6ff;
+      --neutral: #d29922;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text);
+      background: linear-gradient(180deg, #0b0f14 0%, #0e1117 70%);
+      display: grid;
+      min-height: 100vh;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    header,
+    footer {
+      padding: 12px 16px;
+      background: #0b0f14;
+      border-bottom: 1px solid #1f242d;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: .3px;
+    }
+
+    main {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 360px 1fr;
+      padding: 12px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid #1f242d;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .feed {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .post {
+      border: 1px solid #243142;
+      border-radius: 10px;
+      padding: 10px;
+      background: #0f1420;
+    }
+
+    .post h4 {
+      margin: 0 0 6px 0;
+      font-size: 14px;
+    }
+
+    .meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .post p {
+      margin: 0 0 8px 0;
+      line-height: 1.35;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #101824;
+      color: var(--text);
+      border: 1px solid #2b3a4f;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+    }
+
+    .boost {
+      border-color: var(--accent);
+    }
+
+    .hide {
+      border-color: var(--negative);
+    }
+
+    .ignore {
+      border-color: var(--muted);
+      color: #c8d1db;
+    }
+
+    .city {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100%;
+      position: relative;
+    }
+
+    .dash {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 10px;
+      border-bottom: 1px solid #1f242d;
+      background: #0f1420;
+    }
+
+    .stat {
+      font-size: 12px;
+    }
+
+    .bar {
+      height: 6px;
+      background: #101824;
+      border: 1px solid #2b3a4f;
+      border-radius: 999px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+
+    .bar>i {
+      display: block;
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width .3s ease;
+    }
+
+    .bar.positive>i {
+      background: var(--positive);
+    }
+
+    .bar.negative>i {
+      background: var(--negative);
+    }
+
+    .street {
+      padding: 14px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      height: 100%;
+      background: linear-gradient(180deg, rgba(46, 160, 67, .08) 0%, rgba(88, 166, 255, .05) 100%);
+      transition: background .4s ease, filter .4s ease;
+    }
+
+    .headline {
+      font-size: 13px;
+      color: #c8d1db;
+    }
+
+    .crowd {
+      border: 1px dashed #2b3a4f;
+      border-radius: 10px;
+      padding: 12px;
+      overflow: auto;
+      background: #0f1420;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
+      gap: 6px;
+      align-content: start;
+    }
+
+    .person {
+      text-align: center;
+      font-size: 20px;
+      line-height: 28px;
+      filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0));
+      transition: transform .2s ease;
+    }
+
+    .person.agitated {
+      transform: translateY(-2px) scale(1.08) rotate(-2deg);
+    }
+
+    .log {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pill {
+      padding: 4px 8px;
+      border: 1px solid #2b3a4f;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+
+    .round {
+      background: #0f1420;
+      border: 1px solid #223049;
+      border-radius: 8px;
+      padding: 6px 10px;
+    }
+
+    .end {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .end .card {
+      background: var(--panel);
+      border: 1px solid #2b3a4f;
+      border-radius: 12px;
+      padding: 18px;
+      max-width: 560px;
+      width: 100%;
+    }
+
+    .end h2 {
+      margin: 0 0 8px 0;
+    }
+
+    .end p {
+      margin: 0 0 12px 0;
+      color: #c8d1db;
+    }
+
+    .end .row {
+      justify-content: flex-end;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Echo Chamber — Prototype</h1>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="feed" id="feed"></div>
+    </section>
+
+    <section class="panel city">
+      <div class="dash">
+        <div class="stat">
+          <div>😊 Mood: <b id="moodVal">0</b></div>
+          <div class="bar positive"><i id="moodBar"></i></div>
+        </div>
+        <div class="stat">
+          <div>📈 Engagement: <b id="engVal">0</b></div>
+          <div class="bar"><i id="engBar"></i></div>
+        </div>
+        <div class="stat">
+          <div>🗓️ Round: <span class="round" id="round">1 / 10</span></div>
+          <div class="muted" id="lastAction">—</div>
+        </div>
+      </div>
+      <div class="street" id="street">
+        <div class="headline" id="headline">City is calm. People chat about the weather.</div>
+        <div class="crowd" id="crowd"></div>
+        <div class="log">
+          <span class="pill" id="status">Pick a post to influence the feed…</span>
+          <span class="muted" id="history"></span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span class="muted">Tip: Boost = more engagement (often lowers mood). Hide = less engagement (can nudge mood
+      up/down). Ignore = tiny effects.</span>
+  </footer>
+
+  <div class="end" id="end">
+    <div class="card">
+      <h2 id="endTitle">Ending</h2>
+      <p id="endDesc"></p>
+      <p class="muted" id="endStats"></p>
+      <div class="row">
+        <button onclick="restart()">Play Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // --------- Game State ---------
+      const MAX_ROUNDS = 10;
+      let state = {
+        round: 1,
+        mood: 0,         // -50 .. +50
+        engagement: 0,   // 0 .. 100
+        history: []
+      };
+
+      // Personas just for emoji variety
+      const personas = ["🧑", "👩", "👨", "🧑‍🎓", "🧑‍💻", "🧕", "👮", "👷", "🧑‍🍳", "🧑‍🏫", "🧑‍🎤", "🧑‍🔧", "🧑‍🏭", "🧑‍🚒", "🧑‍🔬", "🧑‍🌾"];
+
+      const topics = [
+        { topic: "Community", pos: ["Neighbors repaint a playground", "Free food pantry opens"], neg: ["Park vandalized overnight", "Volunteers shouted at"], neu: ["Street fair planned Sunday"] },
+        { topic: "Politics", pos: ["Rivals agree on transit bill", "Town hall Q&A stays civil"], neg: ["Heated exchange trends", "Candidate accused of smear"], neu: ["Budget workshop scheduled"] },
+        { topic: "Crime", pos: ["Neighborhood watch foils theft", "Lost bike returned"], neg: ["Break-in caught on cam", "Late-night brawl downtown"], neu: ["Police release safety tips"] },
+        { topic: "Environment", pos: ["River cleanup succeeds", "Tree-planting hits goal"], neg: ["Smog alert issued", "Illegal dumping case"], neu: ["Mild rain expected"] },
+        { topic: "Sports", pos: ["Local team funds youth league", "Coach praised for mentorship"], neg: ["Fans clash after game", "Star suspended"], neu: ["Friendly scrimmage announced"] },
+        { topic: "Culture", pos: ["Mural sparks pride", "Free museum day"], neg: ["Art show protest", "Event canceled"], neu: ["Library extends hours"] }
+      ];
+
+      // Utility
+      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+      const rpick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+      function genPost() {
+        const t = rpick(topics);
+        const intensity = rpick([1, 1, 1, 2, 2, 3]); // weighted
+        const tone = rpick(["positive", "neutral", "negative"]);
+        let title = "";
+        if (tone === "positive") title = rpick(t.pos);
+        else if (tone === "negative") title = rpick(t.neg);
+        else title = rpick(t.neu);
+
+        const emoji = tone === "positive" ? "✨"
+          : tone === "negative" ? "⚠️"
+            : "📰";
+        return {
+          id: crypto.randomUUID(),
+          topic: t.topic,
+          tone, intensity,
+          title,
+          caption: tone === "positive" ? "Small act, big impact."
+            : tone === "negative" ? "Eyeballs glued to the feed."
+              : "Just the facts.",
+          emoji
+        };
+      }
+
+      function genRoundPosts() {
+        // ensure a mix: pos, neg, neutral
+        const p = [{ tone: "positive" }, { tone: "negative" }, { tone: "neutral" }].map(seed => {
+          const post = genPost();
+          post.tone = seed.tone;
+          // re-roll title to match tone
+          const t = topics.find(x => x.topic === post.topic);
+          if (seed.tone === "positive") post.title = rpick(t.pos);
+          if (seed.tone === "negative") post.title = rpick(t.neg);
+          if (seed.tone === "neutral") post.title = rpick(t.neu);
+          post.emoji = seed.tone === "positive" ? "✨" : seed.tone === "negative" ? "⚠️" : "📰";
+          return post;
+        });
+        // add one wildcard
+        p.push(genPost());
+        return p;
+      }
+
+      // --------- Effects ---------
+      function applyChoice(choice, post) {
+        // Base deltas by tone & intensity
+        const I = post.intensity;
+        let dMood = 0, dEng = 0, headline = "";
+
+        if (choice === "Boost") {
+          if (post.tone === "positive") { dMood += 4 * I; dEng += 3 * I; }
+          if (post.tone === "neutral") { dMood += 0; dEng += 2 * I; }
+          if (post.tone === "negative") { dMood -= 5 * I; dEng += 5 * I; }
+          headline = `${post.title} (boosted)`;
+        } else if (choice === "Hide") {
+          if (post.tone === "positive") { dMood -= 1 * I; dEng -= 2 * I; }
+          if (post.tone === "neutral") { dMood += 0; dEng -= 2 * I; }
+          if (post.tone === "negative") { dMood += 2 * I; dEng -= 3 * I; }
+          headline = `${post.title} (hidden)`;
+        } else { // Ignore
+          if (post.tone === "positive") { dMood += 1 * I; dEng += 0; }
+          if (post.tone === "neutral") { dMood += 0; dEng += 0; }
+          if (post.tone === "negative") { dMood -= 2 * I; dEng += 1 * I; }
+          headline = `${post.title} (ignored)`;
+        }
+
+        state.mood = clamp(state.mood + dMood, -50, 50);
+        state.engagement = clamp(state.engagement + dEng, 0, 100);
+
+        state.history.push({ round: state.round, choice, tone: post.tone, topic: post.topic, intensity: post.intensity, headline });
+
+        updateUI({ headline: post.title, choice });
+        nextRound();
+      }
+
+      // --------- Rendering ---------
+      const $ = sel => document.querySelector(sel);
+      const feedEl = $("#feed");
+      const moodBar = $("#moodBar");
+      const engBar = $("#engBar");
+      const moodVal = $("#moodVal");
+      const engVal = $("#engVal");
+      const roundVal = $("#round");
+      const lastAction = $("#lastAction");
+      const headlineEl = $("#headline");
+      const crowdEl = $("#crowd");
+      const statusEl = $("#status");
+      const historyEl = $("#history");
+      const streetEl = $("#street");
+      const endEl = $("#end");
+      const endTitle = $("#endTitle");
+      const endDesc = $("#endDesc");
+      const endStats = $("#endStats");
+
+      function renderFeed(posts) {
+        feedEl.innerHTML = "";
+        posts.forEach((p, idx) => {
+          const card = document.createElement("div");
+          card.className = "post";
+          card.innerHTML = `
+        <div class="meta">${p.emoji} ${p.topic} • Tone: <b style="text-transform:capitalize">${p.tone}</b> • Intensity: ${p.intensity}</div>
+        <h4>${p.title}</h4>
+        <p>${p.caption}</p>
+        <div class="row">
+          <button class="boost">Boost</button>
+          <button class="hide">Hide</button>
+          <button class="ignore">Ignore</button>
+        </div>
+      `;
+          const [bBoost, bHide, bIgnore] = card.querySelectorAll("button");
+          bBoost.onclick = () => applyChoice("Boost", p);
+          bHide.onclick = () => applyChoice("Hide", p);
+          bIgnore.onclick = () => applyChoice("Ignore", p);
+          feedEl.appendChild(card);
+        });
+      }
+
+      function renderCrowd() {
+        const peopleCount = 60 + Math.round(state.engagement * 0.6); // 60..120
+        const agitatedRatio = state.mood < 0 ? Math.min(0.8, Math.abs(state.mood) / 60) : 0;
+        crowdEl.innerHTML = "";
+        for (let i = 0; i < peopleCount; i++) {
+          const span = document.createElement("div");
+          span.className = "person";
+          if (Math.random() < agitatedRatio) span.classList.add("agitated");
+          span.textContent = rpick(personas);
+          crowdEl.appendChild(span);
+        }
+
+        // mood tint
+        if (state.mood > 15) {
+          streetEl.style.background = "linear-gradient(180deg, rgba(46,160,67,.18) 0%, rgba(88,166,255,.10) 100%)";
+          streetEl.style.filter = "saturate(1.05)";
+        } else if (state.mood < -15) {
+          streetEl.style.background = "linear-gradient(180deg, rgba(248,81,73,.10) 0%, rgba(210,153,34,.08) 100%)";
+          streetEl.style.filter = "contrast(1.05) saturate(.9)";
+        } else {
+          streetEl.style.background = "linear-gradient(180deg, rgba(46,160,67,.08) 0%, rgba(88,166,255,.05) 100%)";
+          streetEl.style.filter = "none";
+        }
+      }
+
+      function updateUI({ headline, choice } = {}) {
+        moodVal.textContent = state.mood;
+        engVal.textContent = state.engagement;
+        roundVal.textContent = `${state.round} / ${MAX_ROUNDS}`;
+        moodBar.style.width = `${(state.mood + 50) / 100 * 100}%`;   // map -50..50 to 0..100
+        engBar.style.width = `${state.engagement}%`;
+        if (headline) headlineEl.textContent = headline;
+        if (choice) {
+          lastAction.textContent = `Last action: ${choice}`;
+          statusEl.textContent = `You chose to ${choice.toLowerCase()}.`;
+        }
+        historyEl.textContent = state.history.slice(-3).map(h => `${h.choice}(${h.tone})`).join(" • ");
+        renderCrowd();
+      }
+
+      function nextRound() {
+        if (state.round >= MAX_ROUNDS) {
+          endGame();
+          return;
+        }
+        state.round++;
+        const posts = genRoundPosts();
+        renderFeed(posts);
+        updateUI();
+      }
+
+      function endGame() {
+        // Determine ending
+        let title = "Mediocre Middle";
+        let desc = "You kept the feed humming, but nothing really changed.";
+        if (state.mood >= 30 && state.engagement < 50) {
+          title = "Harmony";
+          desc = "A calmer city… but the board wanted more clicks. You’re let go.";
+        } else if (state.mood <= -30 && state.engagement >= 50) {
+          title = "Chaos";
+          desc = "You broke records. Also the city. Advertisers love you.";
+        } else if (state.engagement <= 10) {
+          title = "Digital Ghost Town";
+          desc = "Silence. When everything is muted, everyone leaves.";
+        }
+        endTitle.textContent = title;
+        endDesc.textContent = desc;
+        endStats.textContent = `Final Mood: ${state.mood} | Final Engagement: ${state.engagement} | Rounds: ${MAX_ROUNDS}`;
+        endEl.style.display = "flex";
+      }
+
+      function restart() {
+        state = { round: 1, mood: 0, engagement: 0, history: [] };
+        endEl.style.display = "none";
+        renderFeed(genRoundPosts());
+        updateUI({ headline: "City is calm. People chat about the weather.", choice: null });
+      }
+      window.restart = restart;
+
+      // Boot
+      renderFeed(genRoundPosts());
+      updateUI({});
+    })();
+  </script>
+</body>
+
+</html>
