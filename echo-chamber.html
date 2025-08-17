@@ -82,16 +82,17 @@
             flex: 1;
             height: 100%;
             position: relative;
-            background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 60%, #e0e0e0 60%);
+            background: #87CEEB;
             transition: all 1s;
+            overflow: hidden;
         }
 
         .city-view.positive {
-            background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 60%, #90EE90 60%);
+            background: #87CEEB;
         }
 
         .city-view.negative {
-            background: linear-gradient(to bottom, #666 0%, #666 60%, #999 60%);
+            background: #666;
         }
 
         .feed-panel {
@@ -708,7 +709,7 @@
 
         <div id="gameScreen" class="screen">
             <div class="city-view" id="cityView">
-                <svg width="100%" height="100%" viewBox="0 0 800 500" id="citySvg">
+                <svg width="100%" height="100%" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" id="citySvg">
                     <!-- Enhanced gradients and patterns -->
                     <defs>
                         <!-- Day sky gradient -->

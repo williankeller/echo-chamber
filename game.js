@@ -173,7 +173,15 @@ class EchoChamberGame {
         const intensity = card.dataset.intensity;
         const topic = card.dataset.topic;
         
-        const engagementBoost = intensity === 'high' ? 15 : intensity === 'medium' ? 10 : 5;
+        // Positive content is wholesome but less viral
+        let engagementBoost;
+        if (tone === 'positive') {
+            engagementBoost = intensity === 'high' ? 3 : intensity === 'medium' ? 2 : 1;
+        } else {
+            // Negative/neutral content is more engaging (viral)
+            engagementBoost = intensity === 'high' ? 15 : intensity === 'medium' ? 10 : 5;
+        }
+        
         const moodImpact = tone === 'positive' ? 10 : tone === 'negative' ? -15 : 2;
         
         this.engagement = Math.min(100, this.engagement + engagementBoost);
@@ -229,7 +237,7 @@ class EchoChamberGame {
         const tone = card.dataset.tone;
         const topic = card.dataset.topic;
         
-        this.engagement = Math.max(0, this.engagement - 2);
+        this.engagement = Math.max(0, this.engagement - 3);
         
         this.postHistory.push({ action: 'ignore', tone, topic, day: this.currentDay });
         this.recordDecision('ignore', tone, topic, `Ignored ${tone} content`);

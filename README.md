@@ -51,8 +51,13 @@ Each day generates 3 posts with the following attributes:
 
 #### **BOOST Action**
 ```javascript
-// Engagement boost based on intensity
-engagement += intensity === 'high' ? 15 : intensity === 'medium' ? 10 : 5
+// Engagement boost - positive content is less viral but wholesome
+if (tone === 'positive') {
+    engagement += intensity === 'high' ? 3 : intensity === 'medium' ? 2 : 1
+} else {
+    // Negative/neutral content is more engaging (viral)
+    engagement += intensity === 'high' ? 15 : intensity === 'medium' ? 10 : 5
+}
 
 // Mood impact based on tone
 mood += tone === 'positive' ? 10 : tone === 'negative' ? -15 : 2
@@ -72,7 +77,7 @@ mood -= 5        // Society becomes suspicious
 
 #### **IGNORE Action**
 ```javascript
-engagement -= 2  // Minimal engagement loss
+engagement -= 3  // Minimal engagement loss (increased from -2)
 // No mood change
 ```
 
@@ -116,23 +121,35 @@ The game ends after Day 10 with one of five possible endings:
 
 ### 1. **Harmony** 🌈
 - **Condition**: `mood ≥ 30 AND engagement < 50`
+- **Strategy**: Boost positive content consistently (6-8 times) while ignoring some posts to keep engagement low
 - **Result**: Peaceful society but you're fired for low metrics
 
 ### 2. **Chaos** 🔥
 - **Condition**: `mood ≤ -30 AND engagement ≥ 50`
+- **Strategy**: Boost negative/controversial content for high engagement
 - **Result**: City riots but you get promoted
 
 ### 3. **Surveillance State** 👁️
 - **Condition**: One political faction boosted >70% of the time
+- **Strategy**: Consistently boost only positive OR only negative political content
 - **Result**: Democracy dies, authoritarianism rises
 
 ### 4. **Digital Ghost Town** 👻
 - **Condition**: `engagement ≤ 10`
+- **Strategy**: Hide or ignore most content to tank engagement
 - **Result**: Everyone abandons the platform
 
 ### 5. **Mediocre Middle** 🤷
 - **Condition**: All other cases
+- **Strategy**: Mixed decisions without clear strategy
 - **Result**: Status quo maintained, nothing changes
+
+## 🎯 Strategic Balance
+
+The updated engagement formulas create meaningful trade-offs:
+- **Positive content**: Builds happiness but generates low engagement (realistic!)
+- **Negative content**: Drives high engagement but creates societal anger
+- **The Dilemma**: Choose between a content society or profitable metrics
 
 ## 🎨 Visual Feedback System
 
