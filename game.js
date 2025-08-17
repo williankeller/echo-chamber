@@ -9,6 +9,8 @@ class EchoChamberGame {
         this.postHistory = [];
         this.maxDays = 10;
         this.audioContext = null;
+        this.npcMemories = this.loadNPCMemories();
+        this.decisionHistory = this.loadDecisionHistory();
         this.initAudio();
         
         this.postTemplates = {
@@ -51,10 +53,12 @@ class EchoChamberGame {
         this.mood = 0;
         this.politicalBias = { left: 0, right: 0 };
         this.postHistory = [];
+        this.decisionHistory = [];
         this.showScreen('gameScreen');
         this.generatePosts();
         this.spawnNPCs();
         this.updateStats();
+        this.updateHistoryTimeline();
     }
 
     generatePosts() {
@@ -181,6 +185,7 @@ class EchoChamberGame {
         }
         
         this.postHistory.push({ action: 'boost', tone, topic, day: this.currentDay });
+        this.recordDecision('boost', tone, topic, `Boosted ${tone} content`);
         
         const emoji = tone === 'positive' ? '❤️' : tone === 'negative' ? '😡' : '👍';
         this.showFloatingEmoji(emoji, 400, 200);
@@ -192,6 +197,7 @@ class EchoChamberGame {
             this.playSound('boost-negative');
         }
         
+        this.updateNPCMemories('boost', tone);
         this.animateNPCReaction(tone, 'boost');
         this.nextDay();
     }
@@ -207,9 +213,11 @@ class EchoChamberGame {
         this.mood = Math.max(-50, Math.min(50, this.mood - 5));
         
         this.postHistory.push({ action: 'hide', tone, topic, day: this.currentDay });
+        this.recordDecision('hide', tone, topic, `Hidden ${tone} content`);
         
         this.showFloatingEmoji('🚫', 400, 200);
         this.playSound('hide');
+        this.updateNPCMemories('hide', tone);
         this.animateNPCReaction('negative', 'hide');
         this.nextDay();
     }
@@ -224,9 +232,11 @@ class EchoChamberGame {
         this.engagement = Math.max(0, this.engagement - 2);
         
         this.postHistory.push({ action: 'ignore', tone, topic, day: this.currentDay });
+        this.recordDecision('ignore', tone, topic, `Ignored ${tone} content`);
         
         this.showFloatingEmoji('➡️', 400, 200);
         this.playSound('ignore');
+        this.updateNPCMemories('ignore', tone);
         this.nextDay();
     }
 
@@ -287,6 +297,16 @@ class EchoChamberGame {
             npcWrapper.appendChild(svg);
             container.appendChild(npcWrapper);
             
+            const npcId = `npc-${i}`;
+            const memory = this.npcMemories[npcId] || {
+                id: npcId,
+                personality: 'balanced',
+                reactivity: 1,
+                trustLevel: 0,
+                emotionalHistory: [],
+                decisions_witnessed: 0
+            };
+
             const npcData = {
                 element: npcWrapper,
                 svg: svg,
@@ -296,8 +316,15 @@ class EchoChamberGame {
                 vy: 0,
                 state: 'walking',
                 color: color,
-                animationTimer: null
+                animationTimer: null,
+                memory: memory
             };
+
+            // Add personality label
+            const personalityLabel = document.createElement('div');
+            personalityLabel.className = 'npc-personality';
+            personalityLabel.textContent = this.getPersonalityLabel(memory);
+            npcWrapper.appendChild(personalityLabel);
             
             this.npcs.push(npcData);
             this.updateNPCBehavior(npcData);
@@ -509,40 +536,103 @@ class EchoChamberGame {
     }
 
     updateCityAppearance() {
-        const buildings = document.querySelectorAll('.building');
-        const svg = document.getElementById('citySvg');
+        const sky = document.getElementById('sky');
+        const celestial = document.getElementById('celestial');
+        const clouds = document.getElementById('clouds');
+        const windows = document.querySelectorAll('[fill="url(#windows)"]');
+        const billboard = document.getElementById('billboardText');
+        const moodOverlay = document.getElementById('moodOverlay');
+        const lampLights = document.querySelectorAll('[id^="lampLight"]');
+        const chaosGraffiti = document.getElementById('chaosGraffiti');
+        const trees = document.querySelectorAll('[id^="tree"] circle');
         
         if (this.mood > 20) {
-            buildings.forEach(b => b.style.fill = '#4a90e2');
-            svg.style.filter = 'brightness(1.1)';
-        } else if (this.mood < -20) {
-            buildings.forEach(b => b.style.fill = '#2c2c2c');
-            svg.style.filter = 'brightness(0.7)';
-            
-            if (this.mood < -30) {
-                this.addGraffiti();
-            }
+            // Happy city - bright sunny day
+            sky.setAttribute('fill', 'url(#dayGradient)');
+            celestial.setAttribute('fill', '#FFD700');
+            celestial.setAttribute('r', '40');
+            celestial.setAttribute('cy', '80');
+            clouds.setAttribute('opacity', '0.7');
+            windows.forEach(w => w.setAttribute('opacity', '0.5'));
+            billboard.textContent = 'PEACE';
+            billboard.setAttribute('fill', '#4CAF50');
+            moodOverlay.setAttribute('fill', '#90EE90');
+            moodOverlay.setAttribute('opacity', '0.1');
+            lampLights.forEach(l => {
+                l.setAttribute('opacity', '0.3');
+                l.setAttribute('fill', '#FFD700');
+            });
+            chaosGraffiti.setAttribute('opacity', '0');
+            trees.forEach(t => {
+                if (t.getAttribute('fill').includes('22')) {
+                    t.setAttribute('fill', '#228B22');
+                } else {
+                    t.setAttribute('fill', '#32CD32');
+                }
+            });
+        } else if (this.mood < -30) {
+            // Chaos city - night with chaos
+            sky.setAttribute('fill', 'url(#nightGradient)');
+            celestial.setAttribute('fill', '#F0E68C');
+            celestial.setAttribute('r', '25');
+            celestial.setAttribute('cy', '50');
+            clouds.setAttribute('opacity', '0.3');
+            windows.forEach(w => w.setAttribute('opacity', '1'));
+            billboard.textContent = 'CHAOS';
+            billboard.setAttribute('fill', '#FF0000');
+            moodOverlay.setAttribute('fill', '#FF0000');
+            moodOverlay.setAttribute('opacity', '0.2');
+            lampLights.forEach(l => {
+                l.setAttribute('opacity', '1');
+                l.setAttribute('fill', '#FF6B6B');
+            });
+            chaosGraffiti.setAttribute('opacity', '1');
+            trees.forEach(t => t.setAttribute('fill', '#8B4513')); // Dead trees
+        } else if (this.mood < -10) {
+            // Angry city - dark and gloomy
+            sky.setAttribute('fill', '#666');
+            celestial.setAttribute('fill', '#DDD');
+            celestial.setAttribute('r', '30');
+            clouds.setAttribute('opacity', '0.9');
+            windows.forEach(w => w.setAttribute('opacity', '0.8'));
+            billboard.textContent = 'ALERT';
+            billboard.setAttribute('fill', '#FF6B6B');
+            moodOverlay.setAttribute('fill', '#8B0000');
+            moodOverlay.setAttribute('opacity', '0.15');
+            lampLights.forEach(l => {
+                l.setAttribute('opacity', '0.9');
+                l.setAttribute('fill', '#FFD700');
+            });
+            chaosGraffiti.setAttribute('opacity', '0');
+            trees.forEach(t => {
+                if (t.getAttribute('fill').includes('22')) {
+                    t.setAttribute('fill', '#556B2F');
+                } else {
+                    t.setAttribute('fill', '#6B8E23');
+                }
+            });
         } else {
-            buildings.forEach(b => b.style.fill = '#4a5568');
-            svg.style.filter = 'brightness(1)';
-        }
-    }
-
-    addGraffiti() {
-        const svg = document.getElementById('citySvg');
-        const existingGraffiti = svg.querySelector('#graffiti');
-        
-        if (!existingGraffiti) {
-            const graffiti = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            graffiti.setAttribute('id', 'graffiti');
-            graffiti.setAttribute('x', '100');
-            graffiti.setAttribute('y', '300');
-            graffiti.setAttribute('fill', '#ff0000');
-            graffiti.setAttribute('font-size', '30');
-            graffiti.setAttribute('font-family', 'Arial');
-            graffiti.setAttribute('transform', 'rotate(-10 100 300)');
-            graffiti.textContent = 'CHAOS';
-            svg.appendChild(graffiti);
+            // Normal city - neutral day
+            sky.setAttribute('fill', 'url(#dayGradient)');
+            celestial.setAttribute('fill', '#FFD700');
+            celestial.setAttribute('r', '35');
+            clouds.setAttribute('opacity', '0.5');
+            windows.forEach(w => w.setAttribute('opacity', '0.6'));
+            billboard.textContent = 'NEWS';
+            billboard.setAttribute('fill', '#999');
+            moodOverlay.setAttribute('opacity', '0');
+            lampLights.forEach(l => {
+                l.setAttribute('opacity', '0.5');
+                l.setAttribute('fill', '#FFD700');
+            });
+            chaosGraffiti.setAttribute('opacity', '0');
+            trees.forEach(t => {
+                if (t.getAttribute('fill').includes('22')) {
+                    t.setAttribute('fill', '#228B22');
+                } else {
+                    t.setAttribute('fill', '#32CD32');
+                }
+            });
         }
     }
 
@@ -636,7 +726,165 @@ class EchoChamberGame {
     }
 
 
+    loadNPCMemories() {
+        const saved = localStorage.getItem('echoChamber_npcMemories');
+        return saved ? JSON.parse(saved) : {};
+    }
+
+    saveNPCMemories() {
+        const memories = {};
+        this.npcs.forEach(npc => {
+            if (npc.memory) {
+                memories[npc.memory.id] = npc.memory;
+            }
+        });
+        localStorage.setItem('echoChamber_npcMemories', JSON.stringify(memories));
+    }
+
+    loadDecisionHistory() {
+        const saved = localStorage.getItem('echoChamber_decisionHistory');
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    saveDecisionHistory() {
+        localStorage.setItem('echoChamber_decisionHistory', JSON.stringify(this.decisionHistory));
+    }
+
+    recordDecision(action, tone, topic, description) {
+        const decision = {
+            day: this.currentDay,
+            action: action,
+            tone: tone,
+            topic: topic,
+            description: description,
+            timestamp: Date.now(),
+            moodBefore: this.mood,
+            engagementBefore: this.engagement
+        };
+        
+        this.decisionHistory.push(decision);
+        this.saveDecisionHistory();
+        this.updateHistoryTimeline();
+    }
+
+    updateNPCMemories(action, tone) {
+        this.npcs.forEach(npc => {
+            const memory = npc.memory;
+            memory.decisions_witnessed++;
+            memory.emotionalHistory.push({ action, tone, day: this.currentDay });
+            
+            // Update personality based on decisions
+            if (action === 'boost' && tone === 'negative') {
+                memory.trustLevel -= 0.1;
+                memory.reactivity += 0.05;
+            } else if (action === 'boost' && tone === 'positive') {
+                memory.trustLevel += 0.05;
+            } else if (action === 'hide') {
+                memory.trustLevel -= 0.15;
+                memory.reactivity += 0.1;
+            }
+            
+            // Evolve personality
+            if (memory.trustLevel < -0.5) {
+                memory.personality = 'distrustful';
+            } else if (memory.trustLevel > 0.5) {
+                memory.personality = 'trusting';
+            } else if (memory.reactivity > 1.5) {
+                memory.personality = 'activist';
+            } else if (memory.reactivity < 0.5) {
+                memory.personality = 'apathetic';
+            } else {
+                memory.personality = 'balanced';
+            }
+            
+            // Update personality label
+            const personalityLabel = npc.element.querySelector('.npc-personality');
+            if (personalityLabel) {
+                personalityLabel.textContent = this.getPersonalityLabel(memory);
+            }
+        });
+        
+        this.saveNPCMemories();
+    }
+
+    getPersonalityLabel(memory) {
+        const personalities = {
+            'activist': `🔥 Activist (${memory.decisions_witnessed} seen)`,
+            'distrustful': `😠 Distrustful (${memory.decisions_witnessed} seen)`,
+            'trusting': `😊 Trusting (${memory.decisions_witnessed} seen)`,
+            'apathetic': `😐 Apathetic (${memory.decisions_witnessed} seen)`,
+            'balanced': `⚖️ Balanced (${memory.decisions_witnessed} seen)`
+        };
+        return personalities[memory.personality] || `👤 Citizen (${memory.decisions_witnessed} seen)`;
+    }
+
+    toggleHistory() {
+        const timeline = document.getElementById('historyTimeline');
+        timeline.classList.toggle('show');
+    }
+
+    updateHistoryTimeline() {
+        const timeline = document.getElementById('historyTimeline');
+        timeline.innerHTML = '<h4 style="color: white; margin-bottom: 10px;">📊 Decision History</h4>';
+        
+        const recentHistory = this.decisionHistory.slice(-10); // Show last 10 decisions
+        
+        recentHistory.forEach(decision => {
+            const item = document.createElement('div');
+            item.className = 'timeline-item';
+            
+            item.innerHTML = `
+                <div class="timeline-day">D${decision.day}</div>
+                <div class="timeline-action action-${decision.action}">${decision.action.toUpperCase()}</div>
+                <div class="timeline-content">${decision.description}</div>
+            `;
+            
+            timeline.appendChild(item);
+        });
+        
+        if (this.decisionHistory.length === 0) {
+            timeline.innerHTML += '<p style="color: #999; text-align: center;">No decisions yet...</p>';
+        }
+    }
+
+    updateNPCBehavior(npc) {
+        if (npc.animationTimer) {
+            clearInterval(npc.animationTimer);
+        }
+        
+        const moodLevel = this.mood;
+        const personality = npc.memory.personality;
+        const reactivity = npc.memory.reactivity;
+        
+        // Personality affects how NPCs react to mood
+        let adjustedMoodLevel = moodLevel;
+        if (personality === 'activist') {
+            adjustedMoodLevel = moodLevel * reactivity; // More extreme reactions
+        } else if (personality === 'apathetic') {
+            adjustedMoodLevel = moodLevel * 0.5; // Less reactive
+        } else if (personality === 'distrustful') {
+            adjustedMoodLevel = Math.min(moodLevel - 10, moodLevel * 1.2); // Always more negative
+        }
+        
+        if (adjustedMoodLevel < -30) {
+            npc.state = 'chaos';
+            this.animateChaos(npc);
+        } else if (adjustedMoodLevel < -10) {
+            npc.state = 'angry';
+            this.animateAngry(npc);
+        } else if (adjustedMoodLevel > 20) {
+            npc.state = 'happy';
+            this.animateHappy(npc);
+        } else {
+            npc.state = 'walking';
+            this.animateWalking(npc);
+        }
+    }
+
     endGame() {
+        this.saveNPCMemories();
+        this.saveDecisionHistory();
+        
         const endings = this.determineEnding();
         document.getElementById('endingTitle').textContent = endings.title;
         document.getElementById('endingDescription').textContent = endings.description;
