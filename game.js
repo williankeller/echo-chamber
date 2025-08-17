@@ -275,22 +275,24 @@ class EchoChamberGame {
             
             const color = ['#000', '#222', '#444'][Math.floor(Math.random() * 3)];
             
+            // Default normal state - will be updated based on mood
             svg.innerHTML = `
                 <g class="stick-body">
                     <!-- Head -->
-                    <circle cx="20" cy="10" r="6" fill="white" stroke="${color}" stroke-width="3"/>
+                    <circle class="head" cx="20" cy="15" r="8" fill="white" stroke="${color}" stroke-width="3"/>
+                    <!-- Eyes -->
+                    <circle class="left-eye" cx="16" cy="13" r="1.5" fill="${color}"/>
+                    <circle class="right-eye" cx="24" cy="13" r="1.5" fill="${color}"/>
+                    <!-- Mouth -->
+                    <path class="mouth" d="M 16 18 L 24 18" fill="none" stroke="${color}" stroke-width="2"/>
                     <!-- Body -->
-                    <line x1="20" y1="16" x2="20" y2="35" stroke="${color}" stroke-width="3"/>
+                    <line class="body" x1="20" y1="23" x2="20" y2="45" stroke="${color}" stroke-width="4"/>
                     <!-- Arms -->
-                    <line class="left-arm" x1="20" y1="22" x2="10" y2="30" stroke="${color}" stroke-width="3"/>
-                    <line class="right-arm" x1="20" y1="22" x2="30" y2="30" stroke="${color}" stroke-width="3"/>
+                    <line class="left-arm" x1="20" y1="30" x2="10" y2="40" stroke="${color}" stroke-width="3"/>
+                    <line class="right-arm" x1="20" y1="30" x2="30" y2="40" stroke="${color}" stroke-width="3"/>
                     <!-- Legs -->
-                    <line class="left-leg" x1="20" y1="35" x2="12" y2="50" stroke="${color}" stroke-width="3"/>
-                    <line class="right-leg" x1="20" y1="35" x2="28" y2="50" stroke="${color}" stroke-width="3"/>
-                    <!-- Face -->
-                    <circle class="left-eye" cx="17" cy="8" r="1.5" fill="${color}"/>
-                    <circle class="right-eye" cx="23" cy="8" r="1.5" fill="${color}"/>
-                    <path class="mouth" d="M 16 12 Q 20 14 24 12" fill="none" stroke="${color}" stroke-width="1.5"/>
+                    <line class="left-leg" x1="20" y1="45" x2="12" y2="60" stroke="${color}" stroke-width="3"/>
+                    <line class="right-leg" x1="20" y1="45" x2="28" y2="60" stroke="${color}" stroke-width="3"/>
                 </g>
             `;
             
@@ -353,8 +355,75 @@ class EchoChamberGame {
         }
     }
 
+    setStickFigureExpression(npc, mood) {
+        const head = npc.svg.querySelector('.head');
+        const leftEye = npc.svg.querySelector('.left-eye');
+        const rightEye = npc.svg.querySelector('.right-eye');
+        const mouth = npc.svg.querySelector('.mouth');
+        const bodyGroup = npc.svg.querySelector('.stick-body');
+        
+        // Reset any transforms
+        if (bodyGroup) bodyGroup.style.transform = '';
+        
+        // Always keep the color black/dark
+        const stickColor = npc.color || '#333';
+        
+        switch(mood) {
+            case 'happy':
+                // Happy expression
+                leftEye.setAttribute('cy', '13');
+                leftEye.setAttribute('r', '1.5');
+                leftEye.setAttribute('fill', stickColor);
+                rightEye.setAttribute('cy', '13');
+                rightEye.setAttribute('r', '1.5');
+                rightEye.setAttribute('fill', stickColor);
+                mouth.setAttribute('d', 'M 14 18 Q 20 22 26 18'); // Smile
+                mouth.setAttribute('fill', 'none');
+                break;
+                
+            case 'angry':
+                // Angry expression - angry eyebrows effect using eyes
+                leftEye.setAttribute('cy', '14');
+                leftEye.setAttribute('r', '2');
+                leftEye.setAttribute('fill', stickColor);
+                rightEye.setAttribute('cy', '14');
+                rightEye.setAttribute('r', '2');
+                rightEye.setAttribute('fill', stickColor);
+                mouth.setAttribute('d', 'M 14 20 Q 20 17 26 20'); // Frown
+                mouth.setAttribute('fill', 'none');
+                break;
+                
+            case 'chaos':
+                // Chaos expression - crazy eyes
+                leftEye.setAttribute('cy', '13');
+                leftEye.setAttribute('r', '2.5');
+                leftEye.setAttribute('fill', stickColor);
+                rightEye.setAttribute('cy', '13');
+                rightEye.setAttribute('r', '2.5');
+                rightEye.setAttribute('fill', stickColor);
+                // Screaming mouth
+                mouth.setAttribute('d', 'M 16 18 L 16 22 L 24 22 L 24 18 Z');
+                mouth.setAttribute('fill', stickColor);
+                break;
+                
+            default: // normal
+                leftEye.setAttribute('cy', '13');
+                leftEye.setAttribute('r', '1.5');
+                leftEye.setAttribute('fill', stickColor);
+                rightEye.setAttribute('cy', '13');
+                rightEye.setAttribute('r', '1.5');
+                rightEye.setAttribute('fill', stickColor);
+                mouth.setAttribute('d', 'M 16 18 L 24 18'); // Neutral
+                mouth.setAttribute('fill', 'none');
+                break;
+        }
+    }
+
     animateWalking(npc) {
         npc.vx = (Math.random() - 0.5) * 2;
+        
+        // Set normal expression
+        this.setStickFigureExpression(npc, 'normal');
         
         npc.animationTimer = setInterval(() => {
             npc.x += npc.vx;
@@ -368,13 +437,11 @@ class EchoChamberGame {
             const arms = npc.svg.querySelectorAll('.left-arm, .right-arm');
             const time = Date.now() / 200;
             
+            // Normal walking animation
             legs[0].setAttribute('x2', (12 + Math.sin(time) * 3).toString());
             legs[1].setAttribute('x2', (28 - Math.sin(time) * 3).toString());
             arms[0].setAttribute('x2', (10 + Math.sin(time) * 2).toString());
             arms[1].setAttribute('x2', (30 - Math.sin(time) * 2).toString());
-            
-            const mouth = npc.svg.querySelector('.mouth');
-            mouth.setAttribute('d', 'M 16 12 Q 20 14 24 12');
         }, 50);
     }
 
@@ -382,9 +449,12 @@ class EchoChamberGame {
         npc.vx = (Math.random() - 0.5) * 1.5;
         const baseY = npc.y;
         
+        // Set happy expression
+        this.setStickFigureExpression(npc, 'happy');
+        
         npc.animationTimer = setInterval(() => {
             npc.x += npc.vx;
-            npc.y = baseY + Math.sin(Date.now() / 300) * 2;
+            npc.y = baseY + Math.sin(Date.now() / 300) * 3;
             
             if (npc.x < -50) npc.x = 750;
             if (npc.x > 750) npc.x = -50;
@@ -396,13 +466,15 @@ class EchoChamberGame {
             const legs = npc.svg.querySelectorAll('.left-leg, .right-leg');
             const arms = npc.svg.querySelectorAll('.left-arm, .right-arm');
             
-            legs[0].setAttribute('x2', 12 + Math.sin(time) * 4);
-            legs[1].setAttribute('x2', 28 - Math.sin(time) * 4);
-            arms[0].setAttribute('y2', 25 - Math.abs(Math.sin(time)) * 5);
-            arms[1].setAttribute('y2', 25 - Math.abs(Math.sin(time)) * 5);
+            // Happy bouncy legs
+            legs[0].setAttribute('x2', 12 + Math.sin(time) * 5);
+            legs[1].setAttribute('x2', 28 - Math.sin(time) * 5);
             
-            const mouth = npc.svg.querySelector('.mouth');
-            mouth.setAttribute('d', 'M 16 11 Q 20 15 24 11');
+            // Arms raised in joy
+            arms[0].setAttribute('x2', 5);
+            arms[0].setAttribute('y2', 20 - Math.abs(Math.sin(time)) * 5);
+            arms[1].setAttribute('x2', 35);
+            arms[1].setAttribute('y2', 20 - Math.abs(Math.sin(time)) * 5);
             
             if (Math.random() < 0.01) {
                 this.showFloatingEmoji('😊', npc.x, npc.y - 20);
@@ -412,6 +484,9 @@ class EchoChamberGame {
 
     animateAngry(npc) {
         npc.vx = (Math.random() - 0.5) * 3;
+        
+        // Set angry expression
+        this.setStickFigureExpression(npc, 'angry');
         
         npc.animationTimer = setInterval(() => {
             npc.x += npc.vx;
@@ -425,16 +500,17 @@ class EchoChamberGame {
             const legs = npc.svg.querySelectorAll('.left-leg, .right-leg');
             const arms = npc.svg.querySelectorAll('.left-arm, .right-arm');
             
-            legs[0].setAttribute('x2', 12 + Math.sin(time) * 5);
-            legs[1].setAttribute('x2', 28 - Math.sin(time) * 5);
-            arms[0].setAttribute('x2', 10 + Math.random() * 4);
-            arms[1].setAttribute('x2', 30 - Math.random() * 4);
+            // Angry stomping legs
+            legs[0].setAttribute('x2', 12 + Math.sin(time) * 6);
+            legs[1].setAttribute('x2', 28 - Math.sin(time) * 6);
+            legs[0].setAttribute('stroke-width', 3 + Math.abs(Math.sin(time)));
+            legs[1].setAttribute('stroke-width', 3 + Math.abs(Math.sin(time)));
             
-            const mouth = npc.svg.querySelector('.mouth');
-            mouth.setAttribute('d', 'M 16 14 Q 20 11 24 14');
-            
-            const eyes = npc.svg.querySelectorAll('.left-eye, .right-eye');
-            eyes.forEach(eye => eye.setAttribute('r', '1.5'));
+            // Fist-like arms
+            arms[0].setAttribute('x2', 8 + Math.random() * 4);
+            arms[0].setAttribute('y2', 35);
+            arms[1].setAttribute('x2', 32 - Math.random() * 4);
+            arms[1].setAttribute('y2', 35);
             
             if (Math.random() < 0.005) {
                 this.showFloatingEmoji('😠', npc.x, npc.y - 20);
@@ -443,8 +519,11 @@ class EchoChamberGame {
     }
 
     animateChaos(npc) {
-        npc.vx = (Math.random() - 0.5) * 6;
-        npc.vy = (Math.random() - 0.5) * 2;
+        npc.vx = (Math.random() - 0.5) * 8;
+        npc.vy = (Math.random() - 0.5) * 3;
+        
+        // Set chaos expression
+        this.setStickFigureExpression(npc, 'chaos');
         
         npc.animationTimer = setInterval(() => {
             npc.x += npc.vx;
@@ -480,8 +559,16 @@ class EchoChamberGame {
             const mouth = npc.svg.querySelector('.mouth');
             mouth.setAttribute('d', 'M 16 14 L 24 14');
             
-            const body = npc.svg.querySelector('.stick-body');
-            body.style.transform = `rotate(${Math.sin(time) * 10}deg)`;
+            // Shaking effect for chaos
+            const bodyGroup = npc.svg.querySelector('.stick-body');
+            const head = npc.svg.querySelector('.head');
+            bodyGroup.style.transform = `rotate(${Math.sin(time) * 15}deg)`;
+            
+            // Head shaking
+            if (head) {
+                const shakeX = Math.random() * 4 - 2;
+                head.setAttribute('cx', 20 + shakeX);
+            }
             
             if (Math.random() < 0.02) {
                 const emojis = ['😡', '💢', '🔥', '⚡'];
