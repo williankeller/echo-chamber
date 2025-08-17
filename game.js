@@ -8,6 +8,8 @@ class EchoChamberGame {
         this.npcs = [];
         this.postHistory = [];
         this.maxDays = 10;
+        this.audioContext = null;
+        this.initAudio();
         
         this.postTemplates = {
             positive: [
@@ -183,6 +185,13 @@ class EchoChamberGame {
         const emoji = tone === 'positive' ? '❤️' : tone === 'negative' ? '😡' : '👍';
         this.showFloatingEmoji(emoji, 400, 200);
         
+        // Play appropriate sound
+        if (tone === 'positive') {
+            this.playSound('boost-positive');
+        } else if (tone === 'negative') {
+            this.playSound('boost-negative');
+        }
+        
         this.animateNPCReaction(tone, 'boost');
         this.nextDay();
     }
@@ -200,6 +209,7 @@ class EchoChamberGame {
         this.postHistory.push({ action: 'hide', tone, topic, day: this.currentDay });
         
         this.showFloatingEmoji('🚫', 400, 200);
+        this.playSound('hide');
         this.animateNPCReaction('negative', 'hide');
         this.nextDay();
     }
@@ -216,6 +226,7 @@ class EchoChamberGame {
         this.postHistory.push({ action: 'ignore', tone, topic, day: this.currentDay });
         
         this.showFloatingEmoji('➡️', 400, 200);
+        this.playSound('ignore');
         this.nextDay();
     }
 
@@ -452,6 +463,10 @@ class EchoChamberGame {
                     npc.x, 
                     npc.y - 20
                 );
+                
+                if (Math.random() < 0.1) {
+                    this.playSound('chaos');
+                }
             }
             
             this.npcs.forEach(otherNpc => {
@@ -551,6 +566,75 @@ class EchoChamberGame {
             }
         }, 1500);
     }
+
+    initAudio() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.log('Audio not supported');
+        }
+    }
+
+    playSound(type) {
+        if (!this.audioContext) return;
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        switch (type) {
+            case 'boost-positive':
+                // Happy chime sequence
+                oscillator.frequency.setValueAtTime(523.25, this.audioContext.currentTime); // C5
+                oscillator.frequency.setValueAtTime(659.25, this.audioContext.currentTime + 0.1); // E5
+                oscillator.frequency.setValueAtTime(783.99, this.audioContext.currentTime + 0.2); // G5
+                gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                oscillator.type = 'sine';
+                break;
+                
+            case 'boost-negative':
+                // Ominous low tone
+                oscillator.frequency.setValueAtTime(110, this.audioContext.currentTime); // A2
+                oscillator.frequency.setValueAtTime(98, this.audioContext.currentTime + 0.2); // G2
+                gainNode.gain.setValueAtTime(0.15, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.4);
+                oscillator.type = 'square';
+                break;
+                
+            case 'hide':
+                // Quick swoosh sound
+                oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+                oscillator.type = 'sawtooth';
+                break;
+                
+            case 'ignore':
+                // Soft click
+                oscillator.frequency.setValueAtTime(300, this.audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.05, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                oscillator.type = 'square';
+                break;
+                
+            case 'chaos':
+                // Dissonant alarm
+                oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(466.16, this.audioContext.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                oscillator.type = 'square';
+                break;
+        }
+        
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + 0.5);
+    }
+
 
     endGame() {
         const endings = this.determineEnding();
