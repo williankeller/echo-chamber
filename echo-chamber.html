@@ -339,10 +339,9 @@
             font-weight: bold;
         }
 
-        .history-button {
+        .history-button, .config-button {
             position: absolute;
             top: 80px;
-            right: 20px;
             background: rgba(255,255,255,0.9);
             border: none;
             padding: 10px 15px;
@@ -352,7 +351,15 @@
             transition: all 0.3s;
         }
 
-        .history-button:hover {
+        .history-button {
+            right: 20px;
+        }
+
+        .config-button {
+            right: 120px;
+        }
+
+        .history-button:hover, .config-button:hover {
             background: rgba(255,255,255,1);
             transform: translateY(-2px);
         }
@@ -696,6 +703,130 @@
             font-size: 0.9em;
             color: #999;
         }
+
+        /* Config Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: #2d3748;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            color: white;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #4a5568;
+            padding-bottom: 15px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #a0aec0;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .close-btn:hover {
+            color: white;
+        }
+
+        .config-group {
+            margin-bottom: 25px;
+        }
+
+        .config-group h4 {
+            margin-bottom: 15px;
+            color: #e2e8f0;
+            font-size: 1.1em;
+        }
+
+        .config-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .config-option:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .config-option input[type="checkbox"] {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+
+        .config-option span {
+            color: #e2e8f0;
+            font-size: 0.95em;
+        }
+
+        .config-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            border-top: 1px solid #4a5568;
+            padding-top: 20px;
+        }
+
+        .config-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: all 0.3s;
+        }
+
+        .config-btn:not(.secondary) {
+            background: #4299e1;
+            color: white;
+        }
+
+        .config-btn:not(.secondary):hover {
+            background: #3182ce;
+            transform: translateY(-1px);
+        }
+
+        .config-btn.secondary {
+            background: #4a5568;
+            color: #e2e8f0;
+        }
+
+        .config-btn.secondary:hover {
+            background: #718096;
+        }
     </style>
 </head>
 <body>
@@ -939,6 +1070,7 @@
 
                 <div class="day-counter">Day <span id="dayNumber">1</span> / 10</div>
                 <button class="history-button" onclick="game.toggleHistory()">📊 History</button>
+                <button class="config-button" onclick="game.showConfigPanel()">⚙️ Config</button>
                 
                 <div class="history-timeline" id="historyTimeline"></div>
 

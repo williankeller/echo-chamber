@@ -1,3 +1,43 @@
+class NPCPersonality {
+    constructor() {
+        // Base personality (never changes)
+        this.basePersonality = this.rollPersonality();
+        
+        // Current emotional state
+        this.currentMood = this.basePersonality.defaultMood;
+        
+        // Personality attributes
+        this.traits = {
+            optimism: Math.random(),      // 0-1: How positive they interpret events
+            reactivity: Math.random(),     // 0-1: How strongly they react
+            conformity: Math.random(),     // 0-1: How much they follow the crowd
+            resilience: Math.random(),     // 0-1: How quickly they recover
+            skepticism: Math.random(),     // 0-1: How they react to hidden content
+            politicalLean: Math.random() - 0.5  // -0.5 to 0.5
+        };
+        
+        // Memory of recent events
+        this.memory = {
+            recentPosts: [],           // Last 5 posts they "saw"
+            trustInPlatform: 0.5,      // Decreases with hidden content
+            emotionalMomentum: 0,      // Builds up toward rage/joy
+            triggerTopics: []          // Topics that affect them more
+        };
+    }
+    
+    rollPersonality() {
+        const personalities = [
+            { type: 'optimist', defaultMood: 20, emoji: '😊', color: '#4CAF50' },
+            { type: 'pessimist', defaultMood: -10, emoji: '😔', color: '#666' },
+            { type: 'neutral', defaultMood: 0, emoji: '😐', color: '#999' },
+            { type: 'anxious', defaultMood: -5, emoji: '😰', color: '#FFA726' },
+            { type: 'activist', defaultMood: 5, emoji: '✊', color: '#F44336' },
+            { type: 'zen', defaultMood: 10, emoji: '😌', color: '#3F51B5' }
+        ];
+        return personalities[Math.floor(Math.random() * personalities.length)];
+    }
+}
+
 class EchoChamberGame {
     constructor() {
         this.currentDay = 1;
@@ -11,6 +51,8 @@ class EchoChamberGame {
         this.audioContext = null;
         this.npcMemories = this.loadNPCMemories();
         this.decisionHistory = this.loadDecisionHistory();
+        this.activeProtests = 0;
+        this.gameConfig = this.loadGameConfig();
         this.initAudio();
         
         this.postTemplates = {
@@ -66,6 +108,11 @@ class EchoChamberGame {
         container.innerHTML = '';
         this.selectedPost = null;
         
+        // Clear any visual selection states
+        document.querySelectorAll('.post-card.selected').forEach(card => {
+            card.classList.remove('selected');
+        });
+        
         const posts = [];
         const toneDistribution = this.getToneDistribution();
         
@@ -97,14 +144,29 @@ class EchoChamberGame {
             const intensityLevel = post.intensity === 'high' ? 3 : post.intensity === 'medium' ? 2 : 1;
             const categoryLabel = post.topic.charAt(0).toUpperCase() + post.topic.slice(1);
             
-            card.innerHTML = `
-                <div class="post-meta">
-                    <span class="post-emoji">${post.emoji}</span>
-                    <span class="post-category">${categoryLabel}</span>
+            // Build meta info based on config
+            let metaHtml = `
+                <span class="post-emoji">${post.emoji}</span>
+                <span class="post-category">${categoryLabel}</span>
+            `;
+            
+            if (this.gameConfig.showTone) {
+                metaHtml += `
                     <span class="post-separator">•</span>
                     <span class="post-tone tone-${post.tone}">Tone: ${toneLabel}</span>
+                `;
+            }
+            
+            if (this.gameConfig.showIntensity) {
+                metaHtml += `
                     <span class="post-separator">•</span>
                     <span class="post-intensity">Intensity: ${intensityLevel}</span>
+                `;
+            }
+            
+            card.innerHTML = `
+                <div class="post-meta">
+                    ${metaHtml}
                 </div>
                 <div class="post-title">${post.title}</div>
                 <div class="post-content">${post.content}</div>
@@ -206,7 +268,12 @@ class EchoChamberGame {
         }
         
         this.updateNPCMemories('boost', tone);
+        this.updateAllNPCMoods(card, 'boost');
         this.animateNPCReaction(tone, 'boost');
+        
+        // Immediately disable all post interactions
+        this.disableAllPosts();
+        
         this.nextDay();
     }
 
@@ -226,7 +293,12 @@ class EchoChamberGame {
         this.showFloatingEmoji('🚫', 400, 200);
         this.playSound('hide');
         this.updateNPCMemories('hide', tone);
+        this.updateAllNPCMoods(card, 'hide');
         this.animateNPCReaction('negative', 'hide');
+        
+        // Immediately disable all post interactions
+        this.disableAllPosts();
+        
         this.nextDay();
     }
 
@@ -245,7 +317,25 @@ class EchoChamberGame {
         this.showFloatingEmoji('➡️', 400, 200);
         this.playSound('ignore');
         this.updateNPCMemories('ignore', tone);
+        this.updateAllNPCMoods(card, 'ignore');
+        
+        // Immediately disable all post interactions
+        this.disableAllPosts();
+        
         this.nextDay();
+    }
+
+    disableAllPosts() {
+        const postCards = document.querySelectorAll('.post-card');
+        postCards.forEach(card => {
+            card.style.pointerEvents = 'none';
+            card.style.opacity = '0.5';
+            const buttons = card.querySelectorAll('.card-action-btn');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                btn.style.cursor = 'not-allowed';
+            });
+        });
     }
 
     showFloatingEmoji(emoji, x, y) {
@@ -281,7 +371,7 @@ class EchoChamberGame {
             svg.setAttribute('viewBox', '0 0 40 60');
             svg.setAttribute('class', 'stick-figure');
             
-            const color = ['#000', '#222', '#444'][Math.floor(Math.random() * 3)];
+            const color = '#000'; // Always black
             
             // Default normal state - will be updated based on mood
             svg.innerHTML = `
@@ -308,15 +398,16 @@ class EchoChamberGame {
             container.appendChild(npcWrapper);
             
             const npcId = `npc-${i}`;
-            const memory = this.npcMemories[npcId] || {
-                id: npcId,
-                personality: 'balanced',
-                reactivity: 1,
-                trustLevel: 0,
-                emotionalHistory: [],
-                decisions_witnessed: 0
-            };
-
+            const personality = new NPCPersonality();
+            
+            // Load saved memory if exists
+            const savedMemory = this.npcMemories[npcId];
+            if (savedMemory) {
+                personality.memory.decisions_witnessed = savedMemory.decisions_witnessed || 0;
+                personality.memory.trustInPlatform = savedMemory.trustInPlatform || 0.5;
+                personality.memory.emotionalHistory = savedMemory.emotionalHistory || [];
+            }
+            
             const npcData = {
                 element: npcWrapper,
                 svg: svg,
@@ -327,18 +418,200 @@ class EchoChamberGame {
                 state: 'walking',
                 color: color,
                 animationTimer: null,
-                memory: memory
+                personality: personality,
+                walkSpeed: 1,
+                id: npcId
             };
 
-            // Add personality label
-            const personalityLabel = document.createElement('div');
-            personalityLabel.className = 'npc-personality';
-            personalityLabel.textContent = this.getPersonalityLabel(memory);
-            npcWrapper.appendChild(personalityLabel);
+
+            // Add hover tooltip
+            npcWrapper.addEventListener('mouseenter', () => {
+                this.showNPCTooltip(npcData);
+            });
+            npcWrapper.addEventListener('mouseleave', () => {
+                this.hideNPCTooltip();
+            });
             
             this.npcs.push(npcData);
             this.updateNPCBehavior(npcData);
         }
+    }
+
+    updateAllNPCMoods(postCard, action) {
+        const post = {
+            tone: postCard.dataset.tone,
+            topic: postCard.dataset.topic,
+            intensity: postCard.dataset.intensity
+        };
+
+        this.npcs.forEach(npc => {
+            this.calculateMoodChange(npc, post, action);
+            this.renderNPC(npc);
+        });
+
+        this.updateCrowdDynamics();
+    }
+
+    calculateMoodChange(npc, post, action) {
+        if (!npc.personality) return; // Safety check
+        
+        let moodChange = 0;
+        
+        // Base reaction based on post tone
+        const baseReaction = {
+            'positive': 5 * npc.personality.traits.optimism,
+            'negative': -10 * npc.personality.traits.reactivity,
+            'neutral': 1
+        }[post.tone];
+        
+        // Modify based on action
+        if (action === 'boost') {
+            moodChange = baseReaction * 1.5;
+            
+            // Skeptical NPCs distrust boosted negative content more
+            if (post.tone === 'negative' && npc.personality.traits.skepticism > 0.7) {
+                moodChange *= 1.5; // Extra negative reaction
+                npc.personality.memory.trustInPlatform -= 0.1;
+            }
+        } else if (action === 'hide') {
+            // Hidden content makes NPCs suspicious
+            moodChange = -5 * npc.personality.traits.skepticism;
+            npc.personality.memory.trustInPlatform -= 0.05;
+            
+            // Conformist NPCs are more affected by censorship
+            if (npc.personality.traits.conformity > 0.7) {
+                moodChange *= 1.5;
+            }
+        }
+        
+        // Political alignment affects political posts
+        if (post.topic === 'politics') {
+            const alignment = post.tone === 'positive' ? 0.5 : -0.5;
+            const agreement = 1 - Math.abs(npc.personality.traits.politicalLean - alignment);
+            moodChange *= (0.5 + agreement);
+        }
+        
+        // Update emotional momentum
+        npc.personality.memory.emotionalMomentum += moodChange * 0.1;
+        
+        // Apply resilience (recovery toward base personality)
+        const pullToBase = (npc.personality.basePersonality.defaultMood - npc.personality.currentMood) * 
+                           npc.personality.traits.resilience * 0.1;
+        
+        // Final mood calculation
+        npc.personality.currentMood = Math.max(-50, Math.min(50, 
+            npc.personality.currentMood + moodChange + pullToBase
+        ));
+        
+        // Store in memory
+        npc.personality.memory.recentPosts.push({ post, action, reaction: moodChange });
+        if (npc.personality.memory.recentPosts.length > 5) {
+            npc.personality.memory.recentPosts.shift();
+        }
+    }
+
+    renderNPC(npc) {
+        if (!npc.personality) return; // Safety check
+        
+        const wrapper = npc.element;
+        
+        // Color based on current mood vs base personality
+        const moodDiff = Math.abs(npc.personality.currentMood - npc.personality.basePersonality.defaultMood);
+        const stress = Math.min(1, moodDiff / 30);
+        
+        // Update stick figure color
+        const head = npc.svg.querySelector('.head');
+        const bodyLines = npc.svg.querySelectorAll('line');
+        
+        if (head) {
+            // Head color shows stress
+            head.style.fill = stress > 0.5 ? '#FFE0E0' : 'white';
+        }
+        
+        bodyLines.forEach(el => {
+            // Keep stick figures black
+            el.style.stroke = '#000';
+            el.style.opacity = 1 - (stress * 0.5);
+        });
+        
+        // Walking speed based on mood and personality
+        const baseSpeed = npc.personality.traits.reactivity * 2 + 1;
+        const moodMultiplier = npc.personality.currentMood < -20 ? 2 : 
+                               npc.personality.currentMood > 20 ? 0.7 : 1;
+        npc.walkSpeed = baseSpeed * moodMultiplier;
+    }
+
+    updateCrowdDynamics() {
+        this.npcs.forEach(npc => {
+            if (!npc.personality) return; // Safety check
+            
+            // Find nearby NPCs
+            const nearby = this.npcs.filter(other => {
+                const dist = Math.abs(other.x - npc.x);
+                return dist < 100 && dist > 0 && other.personality;
+            });
+            
+            // Conformist NPCs adopt nearby moods
+            if (npc.personality.traits.conformity > 0.5 && nearby.length > 0) {
+                const avgMood = nearby.reduce((sum, n) => sum + n.personality.currentMood, 0) / nearby.length;
+                const influence = (avgMood - npc.personality.currentMood) * npc.personality.traits.conformity * 0.05;
+                npc.personality.currentMood += influence;
+            }
+            
+            // Rage momentum builds collectively
+            if (npc.personality.memory.emotionalMomentum < -20) {
+                // Activist types start protests
+                if (npc.personality.basePersonality.type === 'activist') {
+                    this.startProtest(npc);
+                }
+                
+                // Others join based on conformity
+                if (this.activeProtests > 0 && npc.personality.traits.conformity > Math.random()) {
+                    npc.state = 'protesting';
+                }
+            }
+        });
+    }
+
+    startProtest(npc) {
+        if (!this.gameConfig.showProtestSigns) return; // Respect config
+        
+        // Create protest sign above NPC
+        const existingSign = npc.element.querySelector('.protest-sign');
+        if (!existingSign) {
+            const sign = document.createElement('div');
+            sign.className = 'protest-sign';
+            sign.innerHTML = this.getProtestMessage(npc);
+            sign.style.cssText = `
+                position: absolute;
+                top: -50px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #ff4444;
+                color: white;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 10px;
+                white-space: nowrap;
+                z-index: 10;
+            `;
+            npc.element.appendChild(sign);
+            
+            // Attract others
+            this.activeProtests++;
+            npc.state = 'protesting';
+        }
+    }
+
+    getProtestMessage(npc) {
+        const messages = [
+            "TRUTH!",
+            "NO MORE!",
+            "STOP LIES",
+            "WAKE UP!",
+            "RESIST"
+        ];
+        return messages[Math.floor(Math.random() * messages.length)];
     }
 
     updateNPCBehavior(npc) {
@@ -346,7 +619,7 @@ class EchoChamberGame {
             clearInterval(npc.animationTimer);
         }
         
-        const moodLevel = this.mood;
+        const moodLevel = npc.personality ? npc.personality.currentMood : this.mood;
         
         if (moodLevel < -30) {
             npc.state = 'chaos';
@@ -630,6 +903,110 @@ class EchoChamberGame {
         this.updateCityAppearance();
     }
 
+    showNPCTooltip(npc) {
+        if (!this.gameConfig.showNPCTooltips) return; // Respect config
+        
+        const tooltip = document.createElement('div');
+        tooltip.id = 'npc-tooltip';
+        tooltip.style.cssText = `
+            position: absolute;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 200px;
+            pointer-events: none;
+        `;
+        
+        const story = this.getNPCStory(npc);
+        tooltip.innerHTML = `
+            <div><strong>${npc.personality.basePersonality.type.toUpperCase()}</strong></div>
+            <div>Mood: ${Math.round(npc.personality.currentMood)}</div>
+            <div>Trust: ${Math.round(npc.personality.memory.trustInPlatform * 100)}%</div>
+            <div>Optimism: ${Math.round(npc.personality.traits.optimism * 100)}%</div>
+            <div>Reactivity: ${Math.round(npc.personality.traits.reactivity * 100)}%</div>
+            <div>Status: ${story.currentState}</div>
+            ${story.transformation !== "Maintaining equilibrium" ? 
+                `<div style="color: #ff6b6b;"><em>${story.transformation}</em></div>` : ''}
+        `;
+        
+        const rect = npc.element.getBoundingClientRect();
+        tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+        tooltip.style.top = (rect.top - 80) + 'px';
+        
+        document.body.appendChild(tooltip);
+    }
+
+    hideNPCTooltip() {
+        const tooltip = document.getElementById('npc-tooltip');
+        if (tooltip) {
+            tooltip.remove();
+        }
+    }
+
+    getNPCStory(npc) {
+        if (!npc.personality) {
+            return {
+                start: 'unknown',
+                currentState: 'Normal',
+                trustLevel: 0.5,
+                triggerEvents: [],
+                transformation: 'Maintaining equilibrium'
+            };
+        }
+        
+        const journey = {
+            start: npc.personality.basePersonality.type,
+            currentState: this.getMoodState(npc.personality.currentMood),
+            trustLevel: npc.personality.memory.trustInPlatform,
+            triggerEvents: npc.personality.memory.recentPosts.filter(p => 
+                Math.abs(p.reaction) > 10
+            ),
+            transformation: this.getTransformation(npc)
+        };
+        
+        return journey;
+    }
+
+    getMoodState(mood) {
+        if (mood > 20) return "Happy";
+        if (mood > 0) return "Content";
+        if (mood > -20) return "Troubled";
+        if (mood > -30) return "Angry";
+        return "Chaotic";
+    }
+
+    getTransformation(npc) {
+        if (!npc.personality) return "Maintaining equilibrium";
+        
+        const startMood = npc.personality.basePersonality.defaultMood;
+        const currentMood = npc.personality.currentMood;
+        const trustLoss = 0.5 - npc.personality.memory.trustInPlatform;
+        
+        if (startMood > 10 && currentMood < -20) {
+            return "Optimist turned cynic";
+        } else if (trustLoss > 0.3) {
+            return "Lost faith in the system";
+        } else if (Math.abs(npc.personality.memory.emotionalMomentum) > 30) {
+            return "Radicalized by the feed";
+        }
+        return "Maintaining equilibrium";
+    }
+
+    generateNPCReport() {
+        const stories = this.npcs.filter(npc => npc.personality).map(npc => this.getNPCStory(npc));
+        const report = {
+            transformed: stories.filter(s => s.transformation !== "Maintaining equilibrium").length,
+            lostTrust: stories.filter(s => s.trustLevel < 0.3).length,
+            radicalized: stories.filter(s => s.currentState === 'Chaotic').length,
+            examples: stories.slice(0, 3) // Show 3 example stories
+        };
+        
+        return report;
+    }
+
     updateCityAppearance() {
         const sky = document.getElementById('sky');
         const celestial = document.getElementById('celestial');
@@ -761,7 +1138,7 @@ class EchoChamberGame {
     }
 
     playSound(type) {
-        if (!this.audioContext) return;
+        if (!this.audioContext || !this.gameConfig.soundEnabled) return;
         
         const oscillator = this.audioContext.createOscillator();
         const gainNode = this.audioContext.createGain();
@@ -829,8 +1206,12 @@ class EchoChamberGame {
     saveNPCMemories() {
         const memories = {};
         this.npcs.forEach(npc => {
-            if (npc.memory) {
-                memories[npc.memory.id] = npc.memory;
+            if (npc.personality && npc.id) {
+                memories[npc.id] = {
+                    decisions_witnessed: npc.personality.memory.decisions_witnessed || 0,
+                    trustInPlatform: npc.personality.memory.trustInPlatform,
+                    emotionalHistory: npc.personality.memory.emotionalHistory || []
+                };
             }
         });
         localStorage.setItem('echoChamber_npcMemories', JSON.stringify(memories));
@@ -839,6 +1220,22 @@ class EchoChamberGame {
     loadDecisionHistory() {
         const saved = localStorage.getItem('echoChamber_decisionHistory');
         return saved ? JSON.parse(saved) : [];
+    }
+
+    loadGameConfig() {
+        const saved = localStorage.getItem('echoChamber_gameConfig');
+        const defaultConfig = {
+            showTone: false,        // Hidden by default for more challenge
+            showIntensity: true,    // Keep intensity visible
+            showNPCTooltips: true,  // Show detailed NPC info on hover
+            showProtestSigns: true, // Show protest signs when NPCs get angry
+            soundEnabled: true      // Enable/disable game sounds
+        };
+        return saved ? { ...defaultConfig, ...JSON.parse(saved) } : defaultConfig;
+    }
+
+    saveGameConfig() {
+        localStorage.setItem('echoChamber_gameConfig', JSON.stringify(this.gameConfig));
     }
 
     saveDecisionHistory() {
@@ -864,58 +1261,166 @@ class EchoChamberGame {
 
     updateNPCMemories(action, tone) {
         this.npcs.forEach(npc => {
-            const memory = npc.memory;
+            if (!npc.personality) return; // Safety check
+            
+            // Update the new personality memory system
+            const memory = npc.personality.memory;
+            if (!memory.decisions_witnessed) memory.decisions_witnessed = 0;
+            if (!memory.emotionalHistory) memory.emotionalHistory = [];
+            
             memory.decisions_witnessed++;
             memory.emotionalHistory.push({ action, tone, day: this.currentDay });
             
-            // Update personality based on decisions
+            // Update personality traits based on decisions
             if (action === 'boost' && tone === 'negative') {
-                memory.trustLevel -= 0.1;
-                memory.reactivity += 0.05;
+                memory.trustInPlatform -= 0.1;
+                npc.personality.traits.reactivity += 0.05;
             } else if (action === 'boost' && tone === 'positive') {
-                memory.trustLevel += 0.05;
+                memory.trustInPlatform += 0.05;
             } else if (action === 'hide') {
-                memory.trustLevel -= 0.15;
-                memory.reactivity += 0.1;
+                memory.trustInPlatform -= 0.15;
+                npc.personality.traits.reactivity += 0.1;
             }
             
-            // Evolve personality
-            if (memory.trustLevel < -0.5) {
-                memory.personality = 'distrustful';
-            } else if (memory.trustLevel > 0.5) {
-                memory.personality = 'trusting';
-            } else if (memory.reactivity > 1.5) {
-                memory.personality = 'activist';
-            } else if (memory.reactivity < 0.5) {
-                memory.personality = 'apathetic';
-            } else {
-                memory.personality = 'balanced';
-            }
-            
-            // Update personality label
-            const personalityLabel = npc.element.querySelector('.npc-personality');
-            if (personalityLabel) {
-                personalityLabel.textContent = this.getPersonalityLabel(memory);
-            }
+            // Keep trust in bounds
+            memory.trustInPlatform = Math.max(0, Math.min(1, memory.trustInPlatform));
+            npc.personality.traits.reactivity = Math.max(0, Math.min(2, npc.personality.traits.reactivity));
         });
         
         this.saveNPCMemories();
     }
 
-    getPersonalityLabel(memory) {
-        const personalities = {
-            'activist': `🔥 Activist (${memory.decisions_witnessed} seen)`,
-            'distrustful': `😠 Distrustful (${memory.decisions_witnessed} seen)`,
-            'trusting': `😊 Trusting (${memory.decisions_witnessed} seen)`,
-            'apathetic': `😐 Apathetic (${memory.decisions_witnessed} seen)`,
-            'balanced': `⚖️ Balanced (${memory.decisions_witnessed} seen)`
-        };
-        return personalities[memory.personality] || `👤 Citizen (${memory.decisions_witnessed} seen)`;
+    getPersonalityLabel(npc) {
+        if (!npc.personality) return "👤 Citizen";
+        
+        const decisions = npc.personality.memory.decisions_witnessed || 0;
+        const type = npc.personality.basePersonality.type;
+        const emoji = npc.personality.basePersonality.emoji;
+        
+        return `${emoji} ${type.charAt(0).toUpperCase() + type.slice(1)} (${decisions} seen)`;
     }
 
     toggleHistory() {
         const timeline = document.getElementById('historyTimeline');
         timeline.classList.toggle('show');
+    }
+
+    showConfigPanel() {
+        // Create config modal if it doesn't exist
+        let configModal = document.getElementById('configModal');
+        if (!configModal) {
+            configModal = document.createElement('div');
+            configModal.id = 'configModal';
+            configModal.className = 'modal';
+            configModal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>⚙️ Game Configuration</h3>
+                        <button class="close-btn" onclick="game.closeConfigPanel()">&times;</button>
+                    </div>
+                    <div class="config-options">
+                        <div class="config-group">
+                            <h4>🎮 Gameplay</h4>
+                            <label class="config-option">
+                                <input type="checkbox" id="showToneToggle" ${this.gameConfig.showTone ? 'checked' : ''}>
+                                <span>Show post tone labels (makes game easier)</span>
+                            </label>
+                            <label class="config-option">
+                                <input type="checkbox" id="showIntensityToggle" ${this.gameConfig.showIntensity ? 'checked' : ''}>
+                                <span>Show post intensity levels</span>
+                            </label>
+                        </div>
+                        <div class="config-group">
+                            <h4>👥 Citizens</h4>
+                            <label class="config-option">
+                                <input type="checkbox" id="showNPCTooltipsToggle" ${this.gameConfig.showNPCTooltips ? 'checked' : ''}>
+                                <span>Show citizen personality on hover</span>
+                            </label>
+                            <label class="config-option">
+                                <input type="checkbox" id="showProtestSignsToggle" ${this.gameConfig.showProtestSigns ? 'checked' : ''}>
+                                <span>Show protest signs when citizens get angry</span>
+                            </label>
+                        </div>
+                        <div class="config-group">
+                            <h4>🔊 Audio</h4>
+                            <label class="config-option">
+                                <input type="checkbox" id="soundEnabledToggle" ${this.gameConfig.soundEnabled ? 'checked' : ''}>
+                                <span>Enable game sounds</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="config-actions">
+                        <button class="config-btn" onclick="game.applyConfig()">Apply Changes</button>
+                        <button class="config-btn secondary" onclick="game.resetConfig()">Reset to Defaults</button>
+                    </div>
+                </div>
+            `;
+            
+            // Add styles
+            configModal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.8);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 2000;
+            `;
+            
+            document.body.appendChild(configModal);
+        }
+        
+        configModal.style.display = 'flex';
+    }
+
+    closeConfigPanel() {
+        const configModal = document.getElementById('configModal');
+        if (configModal) {
+            configModal.style.display = 'none';
+        }
+    }
+
+    applyConfig() {
+        // Update config from form
+        this.gameConfig.showTone = document.getElementById('showToneToggle').checked;
+        this.gameConfig.showIntensity = document.getElementById('showIntensityToggle').checked;
+        this.gameConfig.showNPCTooltips = document.getElementById('showNPCTooltipsToggle').checked;
+        this.gameConfig.showProtestSigns = document.getElementById('showProtestSignsToggle').checked;
+        this.gameConfig.soundEnabled = document.getElementById('soundEnabledToggle').checked;
+        
+        // Save to localStorage
+        this.saveGameConfig();
+        
+        // Refresh posts to apply new settings
+        this.generatePosts();
+        
+        // Close modal
+        this.closeConfigPanel();
+    }
+
+    resetConfig() {
+        // Reset to defaults
+        this.gameConfig = {
+            showTone: false,
+            showIntensity: true,
+            showNPCTooltips: true,
+            showProtestSigns: true,
+            soundEnabled: true
+        };
+        
+        // Update form
+        document.getElementById('showToneToggle').checked = this.gameConfig.showTone;
+        document.getElementById('showIntensityToggle').checked = this.gameConfig.showIntensity;
+        document.getElementById('showNPCTooltipsToggle').checked = this.gameConfig.showNPCTooltips;
+        document.getElementById('showProtestSignsToggle').checked = this.gameConfig.showProtestSigns;
+        document.getElementById('soundEnabledToggle').checked = this.gameConfig.soundEnabled;
+        
+        // Save and apply
+        this.saveGameConfig();
+        this.generatePosts();
     }
 
     updateHistoryTimeline() {
@@ -942,50 +1447,48 @@ class EchoChamberGame {
         }
     }
 
-    updateNPCBehavior(npc) {
-        if (npc.animationTimer) {
-            clearInterval(npc.animationTimer);
-        }
-        
-        const moodLevel = this.mood;
-        const personality = npc.memory.personality;
-        const reactivity = npc.memory.reactivity;
-        
-        // Personality affects how NPCs react to mood
-        let adjustedMoodLevel = moodLevel;
-        if (personality === 'activist') {
-            adjustedMoodLevel = moodLevel * reactivity; // More extreme reactions
-        } else if (personality === 'apathetic') {
-            adjustedMoodLevel = moodLevel * 0.5; // Less reactive
-        } else if (personality === 'distrustful') {
-            adjustedMoodLevel = Math.min(moodLevel - 10, moodLevel * 1.2); // Always more negative
-        }
-        
-        if (adjustedMoodLevel < -30) {
-            npc.state = 'chaos';
-            this.animateChaos(npc);
-        } else if (adjustedMoodLevel < -10) {
-            npc.state = 'angry';
-            this.animateAngry(npc);
-        } else if (adjustedMoodLevel > 20) {
-            npc.state = 'happy';
-            this.animateHappy(npc);
-        } else {
-            npc.state = 'walking';
-            this.animateWalking(npc);
-        }
-    }
 
     endGame() {
         this.saveNPCMemories();
         this.saveDecisionHistory();
         
         const endings = this.determineEnding();
+        const npcReport = this.generateNPCReport();
+        
         document.getElementById('endingTitle').textContent = endings.title;
         document.getElementById('endingDescription').textContent = endings.description;
         document.getElementById('finalEngagement').textContent = Math.round(this.engagement);
         document.getElementById('finalMood').textContent = Math.round(this.mood);
         document.getElementById('finalDays').textContent = this.currentDay - 1;
+        
+        // Add NPC report to ending
+        const npcReportElement = document.createElement('div');
+        npcReportElement.style.cssText = `
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 5px;
+        `;
+        npcReportElement.innerHTML = `
+            <h4>🧠 Citizen Impact Report</h4>
+            <p><strong>${npcReport.transformed}</strong> citizens transformed by your choices</p>
+            <p><strong>${npcReport.lostTrust}</strong> citizens lost trust in the platform</p>
+            <p><strong>${npcReport.radicalized}</strong> citizens reached chaotic state</p>
+            ${npcReport.examples.map(story => 
+                `<div style="margin: 5px 0; font-size: 0.9em;">
+                    <strong>${story.start}</strong> → ${story.currentState} 
+                    ${story.transformation !== "Maintaining equilibrium" ? 
+                        `<em>(${story.transformation})</em>` : ''}
+                </div>`
+            ).join('')}
+        `;
+        
+        const endScreen = document.getElementById('endScreen');
+        const existingReport = endScreen.querySelector('.npc-report');
+        if (existingReport) existingReport.remove();
+        
+        npcReportElement.className = 'npc-report';
+        endScreen.appendChild(npcReportElement);
         
         this.showScreen('endScreen');
     }
